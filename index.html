@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprite Forge - 2D & 3D Sprite Maker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            font-size: 1.1em;
+            color: #aaa;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+        }
+        
+        .tab-btn {
+            padding: 12px 24px;
+            background: #0f3460;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 1em;
+            border-radius: 5px 5px 0 0;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .tab-btn:hover {
+            background: #16213e;
+        }
+        
+        .tab-content {
+            display: none;
+            background: #0f3460;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .canvas-area {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .canvas-wrapper {
+            flex: 1;
+            min-width: 300px;
+            background: #1a1a2e;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        canvas {
+            border: 2px solid #667eea;
+            background: #fff;
+            cursor: crosshair;
+            display: block;
+            margin: 0 auto;
+            border-radius: 5px;
+        }
+        
+        .tools {
+            flex: 0 0 250px;
+            background: #1a1a2e;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .tool-section {
+            margin-bottom: 20px;
+        }
+        
+        .tool-section h3 {
+            margin-bottom: 10px;
+            color: #667eea;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .tool-btn {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #16213e;
+            border: 1px solid #667eea;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-size: 0.95em;
+        }
+        
+        .tool-btn:hover {
+            background: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .tool-btn.active {
+            background: #667eea;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        input[type="color"] {
+            width: 100%;
+            height: 50px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .layer-item {
+            background: #16213e;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .layer-item:hover {
+            background: #1e2d4a;
+        }
+        
+        .layer-item.active {
+            background: #667eea;
+            border-left-color: #fff;
+        }
+        
+        .export-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+        }
+        
+        .voxel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(30px, 1fr));
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .voxel {
+            width: 30px;
+            height: 30px;
+            background: #16213e;
+            border: 1px solid #667eea;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+        
+        .voxel:hover {
+            background: #667eea;
+            transform: scale(1.1);
+        }
+        
+        .voxel.active {
+            background: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.6);
+        }
+        
+        .info-box {
+            background: #1a1a2e;
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .button-group button {
+            flex: 1;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+            
+            .canvas-area {
+                flex-direction: column;
+            }
+            
+            .tools {
+                flex: 1;
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 Sprite Forge</h1>
+            <p class="subtitle">Create amazing 2D sprites and 3D voxel models</p>
+        </header>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('2d')">2D Sprite Maker</button>
+            <button class="tab-btn" onclick="switchTab('3d')">3D Voxel Builder</button>
+        </div>
+        
+        <!-- 2D Sprite Maker Tab -->
+        <div id="2d" class="tab-content active">
+            <div class="canvas-area">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas2d" width="500" height="500"></canvas>
+                </div>
+                
+                <div class="tools">
+                    <div class="tool-section">
+                        <h3>Drawing Tools</h3>
+                        <button class="tool-btn active" onclick="selectTool('pencil')">✏️ Pencil</button>
+                        <button class="tool-btn" onclick="selectTool('eraser')">🗑️ Eraser</button>
+                        <button class="tool-btn" onclick="selectTool('bucket')">🪣 Fill</button>
+                    </div>
+                    
+                    <div class="tool-section">
+                        <h3>Color & Brush</h3>
+                        <label>Color</label>
+                        <input type="color" id="colorPicker" value="#000000">
+                        <label style="margin-top: 10px; display: block;">Brush Size</label>
+                        <input type="range" id="brushSize" min="1" max="50" value="5">
+                        <span id="brushLabel">5px</span>
+                    </div>
+                    
+                    <div class="tool-section">
+                        <h3>Layers</h3>
+                        <div id="layersList">
+                            <div class="layer-item active" onclick="selectLayer(0)">Layer 1</div>
+                        </div>
+                        <button class="tool-btn" onclick="addLayer()">+ Add Layer</button>
+                    </div>
+                    
+                    <div class="export-section">
+                        <h3>Export</h3>
+                        <button class="tool-btn" onclick="exportPNG()">📥 Export as PNG</button>
+                        <button class="tool-btn" onclick="clearCanvas()">🔄 Clear Canvas</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 3D Voxel Builder Tab -->
+        <div id="3d" class="tab-content">
+            <div class="info-box">
+                <strong>3D Voxel Builder:</strong> Click on voxels to add or remove blocks. Use the color picker to change colors and build your 3D sprite!
+            </div>
+            
+            <div class="canvas-area">
+                <div class="canvas-wrapper">
+                    <h3 style="margin-bottom: 15px;">Voxel Grid (16x16)</h3>
+                    <div class="voxel-grid" id="voxelGrid"></div>
+                </div>
+                
+                <div class="tools">
+                    <div class="tool-section">
+                        <h3>Voxel Tools</h3>
+                        <button class="tool-btn active" onclick="selectVoxelTool('paint')">🎨 Paint</button>
+                        <button class="tool-btn" onclick="selectVoxelTool('remove')">🗑️ Remove</button>
+                    </div>
+                    
+                    <div class="tool-section">
+                        <h3>Voxel Color</h3>
+                        <input type="color" id="voxelColor" value="#667eea">
+                    </div>
+                    
+                    <div class="tool-section">
+                        <h3>Grid Size</h3>
+                        <select id="gridSize" onchange="updateGridSize()">
+                            <option value="8">8x8</option>
+                            <option value="16" selected>16x16</option>
+                            <option value="32">32x32</option>
+                        </select>
+                    </div>
+                    
+                    <div class="export-section">
+                        <h3>Export</h3>
+                        <button class="tool-btn" onclick="exportOBJ()">📤 Export as OBJ</button>
+                        <button class="tool-btn" onclick="clearVoxels()">🔄 Clear Grid</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 2D Canvas Variables
+        const canvas2d = document.getElementById('canvas2d');
+        const ctx = canvas2d.getContext('2d');
+        const colorPicker = document.getElementById('colorPicker');
+        const brushSizeInput = document.getElementById('brushSize');
+        const brushLabel = document.getElementById('brushLabel');
+        
+        let currentTool = 'pencil';
+        let isDrawing = false;
+        let layers = [[]];
+        let currentLayerIndex = 0;
+        
+        // Tab Switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // Drawing Tools
+        function selectTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+        
+        // Brush Size Control
+        brushSizeInput.addEventListener('input', (e) => {
+            brushLabel.textContent = e.target.value + 'px';
+        });
+        
+        // Canvas Drawing Events
+        canvas2d.addEventListener('mousedown', startDrawing);
+        canvas2d.addEventListener('mousemove', draw);
+        canvas2d.addEventListener('mouseup', stopDrawing);
+        canvas2d.addEventListener('mouseout', stopDrawing);
+        
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas2d.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            if (currentTool === 'pencil') {
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+            }
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas2d.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            if (currentTool === 'pencil') {
+                ctx.strokeStyle = colorPicker.value;
+                ctx.lineWidth = brushSizeInput.value;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            } else if (currentTool === 'eraser') {
+                ctx.clearRect(x - brushSizeInput.value / 2, y - brushSizeInput.value / 2, brushSizeInput.value, brushSizeInput.value);
+            }
+        }
+        
+        function stopDrawing() {
+            isDrawing = false;
+        }
+        
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas2d.width, canvas2d.height);
+        }
+        
+        function addLayer() {
+            layers.push([]);
+            updateLayersList();
+        }
+        
+        function selectLayer(index) {
+            currentLayerIndex = index;
+            document.querySelectorAll('.layer-item').forEach((item, i) => {
+                if (i === index) item.classList.add('active');
+                else item.classList.remove('active');
+            });
+        }
+        
+        function updateLayersList() {
+            const layersList = document.getElementById('layersList');
+            layersList.innerHTML = '';
+            layers.forEach((layer, index) => {
+                const div = document.createElement('div');
+                div.className = 'layer-item' + (index === currentLayerIndex ? ' active' : '');
+                div.textContent = `Layer ${index + 1}`;
+                div.onclick = () => selectLayer(index);
+                layersList.appendChild(div);
+            });
+        }
+        
+        function exportPNG() {
+            const link = document.createElement('a');
+            link.href = canvas2d.toDataURL('image/png');
+            link.download = 'sprite.png';
+            link.click();
+        }
+        
+        // 3D Voxel Builder
+        const voxelGrid = document.getElementById('voxelGrid');
+        const voxelColor = document.getElementById('voxelColor');
+        let voxels = {};
+        let currentVoxelTool = 'paint';
+        let gridSize = 16;
+        
+        function selectVoxelTool(tool) {
+            currentVoxelTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+        
+        function updateGridSize() {
+            gridSize = parseInt(document.getElementById('gridSize').value);
+            voxels = {};
+            createVoxelGrid();
+        }
+        
+        function createVoxelGrid() {
+            voxelGrid.innerHTML = '';
+            voxelGrid.style.gridTemplateColumns = `repeat(${gridSize}, minmax(30px, 1fr))`;
+            
+            for (let i = 0; i < gridSize * gridSize; i++) {
+                const voxel = document.createElement('div');
+                voxel.className = 'voxel';
+                voxel.dataset.id = i;
+                voxel.addEventListener('click', () => toggleVoxel(i, voxel));
+                voxelGrid.appendChild(voxel);
+            }
+        }
+        
+        function toggleVoxel(id, element) {
+            if (currentVoxelTool === 'paint') {
+                voxels[id] = voxelColor.value;
+                element.style.backgroundColor = voxelColor.value;
+                element.classList.add('active');
+            } else if (currentVoxelTool === 'remove') {
+                delete voxels[id];
+                element.style.backgroundColor = '';
+                element.classList.remove('active');
+            }
+        }
+        
+        function clearVoxels() {
+            voxels = {};
+            document.querySelectorAll('.voxel').forEach(v => {
+                v.style.backgroundColor = '';
+                v.classList.remove('active');
+            });
+        }
+        
+        function exportOBJ() {
+            let obj = '# Sprite Forge 3D Voxel Model\n';
+            let vertexCount = 0;
+            
+            Object.keys(voxels).forEach(id => {
+                const x = id % gridSize;
+                const y = Math.floor(id / gridSize);
+                obj += `v ${x} ${y} 0\n`;
+                vertexCount++;
+            });
+            
+            const link = document.createElement('a');
+            link.href = 'data:text/plain;base64,' + btoa(obj);
+            link.download = 'voxel-model.obj';
+            link.click();
+        }
+        
+        // Initialize
+        createVoxelGrid();
+    </script>
+</body>
+</html>
