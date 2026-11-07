@@ -131,6 +131,7 @@ export const SpriteEditor2D: React.FC<SpriteEditor2DProps> = ({
   const drawStart = useRef<{ x: number; y: number } | null>(null);
   const lastDrawnPos = useRef<{ x: number; y: number } | null>(null);
   const currentPointer = useRef<{ x: number; y: number }>({ x: -1, y: -1 });
+  const currentPointerSubpixel = useRef<{ x: number; y: number }>({ x: -1, y: -1 });
   const stabilizedPos = useRef<{ x: number; y: number } | null>(null);
   const currentPressure = useRef<number>(1.0);
   const lastPressure = useRef<number>(1.0);
@@ -282,6 +283,24 @@ export const SpriteEditor2D: React.FC<SpriteEditor2DProps> = ({
     const rect = containerRef.current.getBoundingClientRect();
     const x = Math.floor((clientX - rect.left - pan.x) / zoom);
     const y = Math.floor((clientY - rect.top - pan.y) / zoom);
+    return { x, y };
+  }, [width, height, pan.x, pan.y, zoom]);
+
+  // Convert screen coordinates to continuous subpixel floating coordinates for high-precision stabilization
+  const screenToCanvasSubpixel = useCallback((clientX: number, clientY: number): { x: number; y: number } => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        const x = (clientX - rect.left) / (rect.width / width);
+        const y = (clientY - rect.top) / (rect.height / height);
+        return { x, y };
+      }
+    }
+    if (!containerRef.current) return { x: -1, y: -1 };
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = (clientX - rect.left - pan.x) / zoom;
+    const y = (clientY - rect.top - pan.y) / zoom;
     return { x, y };
   }, [width, height, pan.x, pan.y, zoom]);
 
@@ -721,11 +740,16 @@ export const SpriteEditor2D: React.FC<SpriteEditor2DProps> = ({
       return;
     }
 
+    const sub = screenToCanvasSubpixel(e.clientX, e.clientY);
+    const rawX = Math.max(0, Math.min(width - 1, sub.x));
+    const rawY = Math.max(0, Math.min(height - 1, sub.y));
+
     isDrawing.current = true;
     drawStart.current = { x, y };
     lastDrawnPos.current = { x, y };
     currentPointer.current = { x, y };
-    stabilizedPos.current = { x, y };
+    currentPointerSubpixel.current = { x: rawX, y: rawY };
+    stabilizedPos.current = { x: rawX, y: rawY };
 
     // Extract PointerEvent pressure
     let p = 1.0;
@@ -827,7 +851,11 @@ export const SpriteEditor2D: React.FC<SpriteEditor2DProps> = ({
     }
 
     const { x, y } = screenToCanvas(e.clientX, e.clientY);
+    const sub = screenToCanvasSubpixel(e.clientX, e.clientY);
+    const rawX = Math.max(0, Math.min(width - 1, sub.x));
+    const rawY = Math.max(0, Math.min(height - 1, sub.y));
     currentPointer.current = { x, y };
+    currentPointerSubpixel.current = { x: rawX, y: rawY };
 
     let movePressure = currentPressure.current;
     if (e.pressure !== undefined && e.pressure > 0) {
@@ -889,11 +917,23 @@ export const SpriteEditor2D: React.FC<SpriteEditor2DProps> = ({
 
         if (toolSettings.stabilization) {
           const weight = Math.max(1, Math.min(20, toolSettings.stabilizationWeight || 6));
-          const factor = 1 / (1 + weight * 0.45);
-          const prevStab = stabilizedPos.current || { x: clampedX, y: clampedY };
-          const nextStabX = prevStab.x + (clampedX - prevStab.x) * factor;
-          const nextStabY = prevStab.y + (clampedY - prevStab.y) * factor;
-          stabilizedPos.current = { x: nextStabX, y: nextStabY };
+          // Subpixel low-pass filtering factor (higher weight = smoother curve, dampens hand tremors)
+          const factor = 1 / (1 + weight * 0.42);
+          const prevStab = stabilizedPos.current || { x: rawX, y: rawY };
+
+          // Micro-tremor deadzone threshold
+          const dist = Math.hypot(rawX - prevStab.x, rawY - prevStab.y);
+          const deadzone = 0.12;
+
+          let nextStabX = prevStab.x;
+          let nextStabY = prevStab.y;
+
+          if (dist > deadzone) {
+            nextStabX = prevStab.x + (rawX - prevStab.x) * factor;
+            nextStabY = prevStab.y + (rawY - prevStab.y) * factor;
+            stabilizedPos.current = { x: nextStabX, y: nextStabY };
+          }
+
           drawTargetX = Math.round(nextStabX);
           drawTargetY = Math.round(nextStabY);
         }
@@ -969,8 +1009,10 @@ export const SpriteEditor2D: React.FC<SpriteEditor2DProps> = ({
     if (activeTool === 'pencil' || activeTool === 'eraser' || activeTool === 'dither' || activeTool === 'mirror') {
       // If stabilization was active, catch up final trailing segment to the pointer position on release
       if (toolSettings.stabilization && lastDrawnPos.current && tempPixels.current) {
-        const finalX = Math.max(0, Math.min(width - 1, currentPointer.current.x));
-        const finalY = Math.max(0, Math.min(height - 1, currentPointer.current.y));
+        const subX = currentPointerSubpixel.current.x >= 0 ? currentPointerSubpixel.current.x : currentPointer.current.x;
+        const subY = currentPointerSubpixel.current.y >= 0 ? currentPointerSubpixel.current.y : currentPointer.current.y;
+        const finalX = Math.round(Math.max(0, Math.min(width - 1, subX)));
+        const finalY = Math.round(Math.max(0, Math.min(height - 1, subY)));
         if (finalX >= 0 && finalY >= 0 && (lastDrawnPos.current.x !== finalX || lastDrawnPos.current.y !== finalY)) {
           const color = activeTool === 'eraser' ? '' : toolSettings.activeColor;
           drawStrokeLine(
@@ -1425,8 +1467,10 @@ export const SpriteEditor2D: React.FC<SpriteEditor2DProps> = ({
 
     // Stroke stabilization leash & trailing brush indicator
     if (isDrawing.current && toolSettings.stabilization && stabilizedPos.current) {
-      const { x: px, y: py } = currentPointer.current;
-      if (px >= 0 && px < width && py >= 0 && py < height) {
+      const sub = currentPointerSubpixel.current;
+      const px = sub.x >= 0 ? sub.x : currentPointer.current.x;
+      const py = sub.y >= 0 ? sub.y : currentPointer.current.y;
+      if (px >= 0 && px <= width && py >= 0 && py <= height) {
         const pScreenX = pan.x + (px + 0.5) * zoom;
         const pScreenY = pan.y + (py + 0.5) * zoom;
         const sScreenX = pan.x + (stabilizedPos.current.x + 0.5) * zoom;
@@ -1436,7 +1480,7 @@ export const SpriteEditor2D: React.FC<SpriteEditor2DProps> = ({
         // Leash pull-string line
         ctx.beginPath();
         ctx.setLineDash([3, 2]);
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.75)';
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
         ctx.lineWidth = 1.5;
         ctx.moveTo(pScreenX, pScreenY);
         ctx.lineTo(sScreenX, sScreenY);
@@ -1445,7 +1489,7 @@ export const SpriteEditor2D: React.FC<SpriteEditor2DProps> = ({
         // Lead pointer dot
         ctx.fillStyle = '#38bdf8';
         ctx.beginPath();
-        ctx.arc(pScreenX, pScreenY, 3, 0, Math.PI * 2);
+        ctx.arc(pScreenX, pScreenY, 3.5, 0, Math.PI * 2);
         ctx.fill();
 
         // Stabilized brush position ring
@@ -1453,7 +1497,7 @@ export const SpriteEditor2D: React.FC<SpriteEditor2DProps> = ({
         ctx.strokeStyle = '#10b981';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(sScreenX, sScreenY, 4.5, 0, Math.PI * 2);
+        ctx.arc(sScreenX, sScreenY, 5, 0, Math.PI * 2);
         ctx.stroke();
 
         ctx.restore();
