@@ -1,0 +1,6 @@
+{
+  "name": "SpriteForge 2D & 3D",
+  "description": "Professional offline 2D sprite and 3D game asset creator for Android and desktop. Export PNG, OBJ, FBX with touch gestures and layer management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

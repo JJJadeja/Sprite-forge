@@ -1,0 +1,73 @@
+name: Build Android APK (Zero PC)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Allows manual 1-tap trigger from phone browser or GitHub Mobile app
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Node Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build Web Application
+        run: npm run build
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Capacitor CLI & Android Platform
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap add android || true
+          npx cap sync android
+
+      - name: Build Debug APK with Gradle
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK to Workflow Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpriteForge-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Create GitHub Release with APK Download
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mobile-build-${{ github.run_number }}
+          name: "SpriteForge Mobile APK Build #${{ github.run_number }}"
+          body: |
+            ### 📱 SpriteForge Android APK Build
+            - Built automatically by GitHub Actions in the cloud.
+            - No PC required!
+            - Tap `app-debug.apk` below to download and install on your phone.
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
